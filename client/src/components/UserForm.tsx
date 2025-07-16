@@ -32,62 +32,62 @@ export interface UserFormData {
     name: string;
     email: string;
     role: 'admin' | 'program_manager' | 'finance_manager';
+    department?: string;
 }
 
 interface UserFormProps {
-    onSubmit: (data: UserFormData) => void;
-    initialData?: UserFormData;
+    onSubmit: (data: UserFormData) => void | Promise<void>;
     isSubmitting: boolean;
+    initialData?: UserFormData;
+    departmentOptions?: string[];
 }
 
-export default function UserForm({ onSubmit, initialData, isSubmitting }: UserFormProps) {
-    const [formData, setFormData] = useState<UserFormData>({
+export default function UserForm({ onSubmit, isSubmitting, initialData, departmentOptions }: UserFormProps) {
+    const [form, setForm] = useState<UserFormData>(initialData || {
         name: '',
         email: '',
         role: 'finance_manager',
+        department: departmentOptions && departmentOptions.length > 1 ? departmentOptions[1] : '',
     });
 
-    useEffect(() => {
-        if (initialData) {
-            setFormData(initialData);
-        }
-    }, [initialData]);
-
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e: FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        onSubmit(formData);
+        onSubmit(form);
     };
 
     return (
-        <Form onSubmit={handleSubmit}>
-            <Input
-                name="name"
-                placeholder="Full Name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-            />
-            <Input
-                name="email"
-                type="email"
-                placeholder="Email Address"
-                value={formData.email}
-                onChange={handleChange}
-                required
-            />
-            <Select name="role" value={formData.role} onChange={handleChange}>
-                <option value="finance_manager">Finance Manager</option>
-                <option value="program_manager">Program Manager</option>
-                <option value="admin">Admin</option>
-            </Select>
-            <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : 'Save User'}
-            </Button>
-        </Form>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <label>
+                Name:
+                <input name="name" value={form.name} onChange={handleChange} required />
+            </label>
+            <label>
+                Email:
+                <input name="email" type="email" value={form.email} onChange={handleChange} required />
+            </label>
+            <label>
+                Role:
+                <select name="role" value={form.role} onChange={handleChange} required>
+                    <option value="admin">Admin</option>
+                    <option value="program_manager">Program Manager</option>
+                    <option value="finance_manager">Finance Manager</option>
+                </select>
+            </label>
+            {departmentOptions && (
+                <label>
+                    Department:
+                    <select name="department" value={form.department || ''} onChange={handleChange} required>
+                        {departmentOptions.filter(dep => dep !== 'All').map(dep => (
+                            <option key={dep} value={dep}>{dep}</option>
+                        ))}
+                    </select>
+                </label>
+            )}
+            <button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save'}</button>
+        </form>
     );
 }

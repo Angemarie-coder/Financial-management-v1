@@ -9,9 +9,13 @@ import { User } from "./entity/User";
 import { Budget } from "./entity/Budget";
 import { Category } from "./entity/Category";
 import { Item } from "./entity/Item";
+import { Salary } from "./entity/Salary";
+import { Transaction } from "./entity/Transaction";
 import usersRouter from './routes/users';
 import authRouter from './routes/auth';
 import budgetsRouter from './routes/budget';
+import salaryRouter from './routes/salary';
+import transactionRouter from './routes/transaction';
 
 const main = async () => {
     try {
@@ -22,7 +26,7 @@ const main = async () => {
             username: config.dbUsername,
             password: config.dbPassword,
             database: "fmp",
-            entities: [User, Budget, Category, Item],
+            entities: [User, Budget, Category, Item, Salary, Transaction],
             synchronize: true,
             logging: false,
         });
@@ -56,6 +60,8 @@ const main = async () => {
     app.use('/api/users', usersRouter);
     app.use('/api/auth', authRouter);
     app.use('/api/budgets', budgetsRouter);
+    app.use('/api/salaries', salaryRouter);
+    app.use('/api/transactions', transactionRouter);
 
     app.listen(config.port, () => {
         console.log(`🚀 Server is listening on http://localhost:${config.port}`);

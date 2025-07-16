@@ -47,6 +47,9 @@ name!: string;
      @Column({ type: "varchar", nullable: true }) // <-- NEW: Add this column
     profilePictureUrl!: string;
 
+  @Column({ type: "varchar", nullable: true })
+  department?: string;
+
   @Column({ default: false })
   isEmailVerified!: boolean;
 

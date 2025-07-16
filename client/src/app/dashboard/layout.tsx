@@ -258,6 +258,31 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         <NavLink href="/dashboard/budgets" $isActive={pathname.includes('/budgets')}>
                             <LuWallet /> Budgets
                         </NavLink>
+                        {(isAdmin || user?.role === 'finance_manager') && (
+                            <NavLink href="/dashboard/reports" $isActive={pathname.includes('/reports')}>
+                                <LuLayoutDashboard /> Reports
+                            </NavLink>
+                        )}
+                        {(isAdmin || user?.role === 'finance_manager') && (
+                            <NavLink href="/dashboard/team" $isActive={pathname.includes('/team')}>
+                                <LuUsers /> Team
+                            </NavLink>
+                        )}
+                        {(isAdmin || user?.role === 'finance_manager') && (
+                            <NavLink href="/dashboard/settings" $isActive={pathname.includes('/settings')}>
+                                <LuWallet /> Settings
+                            </NavLink>
+                        )}
+                        {(isAdmin || user?.role === 'finance_manager') && (
+                            <NavLink href="/dashboard/transactions" $isActive={pathname.includes('/transactions')}>
+                                <LuWallet /> Transactions
+                            </NavLink>
+                        )}
+                        {(isAdmin || user?.role === 'finance_manager') && (
+                            <NavLink href="/dashboard/payroll" $isActive={pathname.includes('/payroll')}>
+                                <LuWallet /> Payroll
+                            </NavLink>
+                        )}
                         {isAdmin && (
                             <NavLink href="/dashboard/users" $isActive={pathname.includes('/users')}>
                                 <LuUsers /> Users

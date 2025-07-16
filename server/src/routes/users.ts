@@ -91,12 +91,21 @@ router.post('/', protect, authorizeAdmin, async (req: AuthRequest, res) => {
     }
 });
 
-// GET /api/users - Get all users
-router.get('/', protect, authorizeAdmin, async (req, res) => {
-    const users = await getRepository(User).find({
-        select: ["id", "name", "email", "role", "createdAt", "profilePictureUrl"]
-    });
-    res.json(users);
+// GET /api/users - List all users, optionally filter by department
+router.get('/', protect, async (req, res) => {
+    try {
+        let { department } = req.query;
+        const userRepository = getRepository(User);
+        let users;
+        if (department && typeof department === 'string') {
+            users = await userRepository.find({ where: { department }, order: { createdAt: 'DESC' } });
+        } else {
+            users = await userRepository.find({ order: { createdAt: 'DESC' } });
+        }
+        res.json(users);
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to fetch users.' });
+    }
 });
 
 // GET /api/users/:id - Get single user

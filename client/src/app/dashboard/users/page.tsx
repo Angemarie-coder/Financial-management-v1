@@ -15,6 +15,7 @@ interface User {
     email: string;
     role: 'admin' | 'program_manager' | 'finance_manager';
     createdAt: string;
+    department?: string;
 }
 
 // --- Styled Components ---
@@ -141,7 +142,8 @@ export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-
+    const [selectedDepartment, setSelectedDepartment] = useState<string>('All');
+    
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -149,10 +151,33 @@ export default function UsersPage() {
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [isAssignSalaryModalOpen, setIsAssignSalaryModalOpen] = useState(false);
+    const [salaryAssigningUser, setSalaryAssigningUser] = useState<User | null>(null);
+    const [salaryForm, setSalaryForm] = useState({ amount: '', netAmount: '', period: '' });
+    const [isAssigningSalary, setIsAssigningSalary] = useState(false);
+    const [salaryError, setSalaryError] = useState<string | null>(null);
+    const [salarySuccess, setSalarySuccess] = useState<string | null>(null);
+
+    const departmentOptions = [
+        'All',
+        'Finance',
+        'HR',
+        'Engineering',
+        'Sales',
+        'Marketing',
+        'Operations',
+        'IT',
+        'Other',
+    ];
+
     const fetchUsers = useCallback(async () => {
         try {
-            // No need to set loading to true here if it's already true initially
-            const response = await api.get('/users');
+            setLoading(true);
+            let url = '/users';
+            if (selectedDepartment && selectedDepartment !== 'All') {
+                url += `?department=${encodeURIComponent(selectedDepartment)}`;
+            }
+            const response = await api.get(url);
             setUsers(response.data);
             setError('');
         } catch (err) {
@@ -160,7 +185,7 @@ export default function UsersPage() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [selectedDepartment]);
 
     useEffect(() => {
         fetchUsers();
@@ -219,11 +244,42 @@ export default function UsersPage() {
         setIsDeleteModalOpen(true);
     };
 
-    if (currentUser?.role !== 'admin') {
+    const openAssignSalaryModal = (user: User) => {
+        setSalaryAssigningUser(user);
+        setSalaryForm({ amount: '', netAmount: '', period: '' });
+        setSalaryError(null);
+        setSalarySuccess(null);
+        setIsAssignSalaryModalOpen(true);
+    };
+
+    const handleAssignSalary = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!salaryAssigningUser) return;
+        setIsAssigningSalary(true);
+        setSalaryError(null);
+        setSalarySuccess(null);
+        try {
+            await api.post('/salaries', {
+                employeeId: salaryAssigningUser.id,
+                amount: parseFloat(salaryForm.amount),
+                netAmount: salaryForm.netAmount ? parseFloat(salaryForm.netAmount) : undefined,
+                period: salaryForm.period,
+            });
+            setSalarySuccess('Salary assigned successfully!');
+            setTimeout(() => setIsAssignSalaryModalOpen(false), 1000);
+        } catch (err: any) {
+            setSalaryError(err.response?.data?.message || 'Failed to assign salary.');
+        } finally {
+            setIsAssigningSalary(false);
+        }
+    };
+
+    // Only restrict if not admin or finance_manager
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'finance_manager') {
         return (
             <PageWrapper>
                 <PageTitle>Access Denied</PageTitle>
-                <p style={{ color: theme.colors.textMuted }}>This page is for administrators only.</p>
+                <p style={{ color: theme.colors.textMuted }}>This page is for administrators and financial managers only.</p>
             </PageWrapper>
         );
     }
@@ -235,7 +291,20 @@ export default function UsersPage() {
         <PageWrapper>
             <PageHeader>
                 <PageTitle>Users</PageTitle>
-                <CreateButton onClick={() => setIsCreateModalOpen(true)}>+ Add User</CreateButton>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <label htmlFor="department-select" style={{ color: theme.colors.textMuted }}>Department:</label>
+                    <select
+                        id="department-select"
+                        value={selectedDepartment}
+                        onChange={e => setSelectedDepartment(e.target.value)}
+                        style={{ padding: 8, borderRadius: 4 }}
+                    >
+                        {departmentOptions.map(dep => (
+                            <option key={dep} value={dep}>{dep}</option>
+                        ))}
+                    </select>
+                    <CreateButton onClick={() => setIsCreateModalOpen(true)}>+ Add User</CreateButton>
+                </div>
             </PageHeader>
             <TableContainer>
                  <Table>
@@ -244,6 +313,7 @@ export default function UsersPage() {
                             <th>Name</th>
                             <th>Email</th>
                             <th>Role</th>
+                            <th>Department</th>
                             <th>Joined</th>
                             <th>Actions</th>
                         </tr>
@@ -258,10 +328,12 @@ export default function UsersPage() {
                                         {user.role.replace('_', ' ')}
                                     </span>
                                 </td>
+                                <td>{user.department || '-'}</td>
                                 <td>{new Date(user.createdAt).toLocaleDateString()}</td>
                                 <td>
                                     <EditButton onClick={() => openEditModal(user)}>Edit</EditButton>
                                     <DeleteButton onClick={() => openDeleteModal(user)}>Delete</DeleteButton>
+                                    <EditButton onClick={() => openAssignSalaryModal(user)} style={{ color: theme.colors.primary }}>Assign Salary</EditButton>
                                 </td>
                             </tr>
                         ))}
@@ -271,7 +343,7 @@ export default function UsersPage() {
 
             {/* --- Modals --- */}
             <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Create New User">
-                <UserForm onSubmit={handleCreateUser} isSubmitting={isSubmitting} />
+                <UserForm onSubmit={handleCreateUser} isSubmitting={isSubmitting} departmentOptions={departmentOptions} />
             </Modal>
 
             <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit User">
@@ -286,6 +358,26 @@ export default function UsersPage() {
                         {isSubmitting ? 'Deleting...' : 'Confirm Delete'}
                     </DeleteButton>
                 </div>
+            </Modal>
+
+            <Modal isOpen={isAssignSalaryModalOpen} onClose={() => setIsAssignSalaryModalOpen(false)} title={`Assign Salary to ${salaryAssigningUser?.name || ''}`}>
+                <form onSubmit={handleAssignSalary} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <label>
+                        Amount (gross):
+                        <input type="number" min="0" step="0.01" required value={salaryForm.amount} onChange={e => setSalaryForm({ ...salaryForm, amount: e.target.value })} />
+                    </label>
+                    <label>
+                        Net Amount (optional):
+                        <input type="number" min="0" step="0.01" value={salaryForm.netAmount} onChange={e => setSalaryForm({ ...salaryForm, netAmount: e.target.value })} />
+                    </label>
+                    <label>
+                        Period (e.g. 2024-06):
+                        <input type="month" required value={salaryForm.period} onChange={e => setSalaryForm({ ...salaryForm, period: e.target.value })} />
+                    </label>
+                    {salaryError && <div style={{ color: 'red' }}>{salaryError}</div>}
+                    {salarySuccess && <div style={{ color: 'green' }}>{salarySuccess}</div>}
+                    <button type="submit" disabled={isAssigningSalary}>{isAssigningSalary ? 'Assigning...' : 'Assign Salary'}</button>
+                </form>
             </Modal>
         </PageWrapper>
     );
