@@ -21,10 +21,6 @@ const main = async () => {
     try {
         await createConnection({
             type: "postgres",
-            host: config.dbHost,
-            port: config.dbPort,
-            username: config.dbUsername,
-            password: config.dbPassword,
             database: "fmp",
             entities: [User, Budget, Category, Item, Salary, Transaction],
             synchronize: true,
