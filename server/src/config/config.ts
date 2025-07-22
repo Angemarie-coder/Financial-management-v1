@@ -17,7 +17,7 @@ if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
 }
 
 export const config = {
-  port: process.env.PORT || 4000,
+  port: process.env.PORT || 5000,
 
   // ✅ Use DATABASE_URL only — for local and Render environments
   databaseUrl: process.env.DATABASE_URL as string,

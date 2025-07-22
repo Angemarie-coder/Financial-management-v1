@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Create a central Axios instance with a base URL
 const api = axios.create({
-    baseURL: 'http://localhost:4000/api', // Your backend API URL
+    baseURL: 'http://localhost:5000/api', // Your backend API URL
 });
 
 // --- Axios Interceptor ---
