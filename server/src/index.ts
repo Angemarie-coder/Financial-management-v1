@@ -21,10 +21,16 @@ const main = async () => {
     try {
         await createConnection({
             type: "postgres",
-            database: "fmp",
+            url: process.env.DATABASE_URL, // Use DATABASE_URL if set
+            host: process.env.DB_HOST,     // fallback for local/dev
+            port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
+            username: process.env.DB_USERNAME,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
             entities: [User, Budget, Category, Item, Salary, Transaction],
             synchronize: true,
             logging: false,
+            ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
         });
         console.log("✅ Database connected successfully!");
     } catch (error) {
