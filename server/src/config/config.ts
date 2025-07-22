@@ -20,6 +20,8 @@ export const config = {
   dbPassword: process.env.DB_PASSWORD,
   jwtSecret: process.env.JWT_SECRET as string,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN as SignOptions['expiresIn'],
+  databaseUrl: process.env.DATABASE_URL,
+
 
   // ✅ Gmail SMTP Configuration
   gmailUser: process.env.GMAIL_USER,
