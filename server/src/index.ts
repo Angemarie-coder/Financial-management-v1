@@ -44,7 +44,11 @@ const main = async () => {
 
     // 1. CORS: Must come first to handle preflight requests.
     app.use(cors({
-        origin: 'http://localhost:3000',
+        origin: [
+            'http://localhost:3000',
+            'https://financialmanagementv1.vercel.app',
+            'https://financialmanagementv1-40c0enx3m-angemarie-coders-projects.vercel.app'
+        ],
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
         allowedHeaders: ['Content-Type', 'Authorization'],
     }));
