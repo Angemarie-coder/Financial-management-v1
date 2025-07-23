@@ -1,9 +1,8 @@
-// src/index.ts
 import "reflect-metadata";
 import express from 'express';
 import { createConnection } from "typeorm";
 import cors from 'cors';
-import path from 'path'; // Import the path module
+import path from 'path';
 import { config } from "./config/config";
 import { User } from "./entity/User";
 import { Budget } from "./entity/Budget";
@@ -21,8 +20,8 @@ const main = async () => {
     try {
         await createConnection({
             type: "postgres",
-            url: process.env.DATABASE_URL, // Use DATABASE_URL if set
-            host: process.env.DB_HOST,     // fallback for local/dev
+            url: process.env.DATABASE_URL,
+            host: process.env.DB_HOST,
             port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
             username: process.env.DB_USERNAME,
             password: process.env.DB_PASSWORD,
@@ -40,17 +39,16 @@ const main = async () => {
 
     const app = express();
 
-    // --- MIDDLEWARE ORDER IS CRITICAL ---
-
     // 1. CORS: Must come first to handle preflight requests.
     app.use(cors({
         origin: [
             'http://localhost:3000',
-            'https://financialmanagementv1.vercel.app',
+            'https://financialmanagementtv1.vercel.app', // Matches deployed URL
             'https://financialmanagementv1-40c0enx3m-angemarie-coders-projects.vercel.app'
         ],
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
         allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: true // Allow credentials if needed
     }));
     
     // 2. Body Parsers: To parse JSON and URL-encoded data.
@@ -58,9 +56,7 @@ const main = async () => {
     app.use(express.urlencoded({ extended: true }));
 
     // 3. Static Files: Serve uploaded files.
-    // This tells Express that the '/public' URL path should map to the 'public' directory on the server.
     app.use('/public', express.static(path.join(__dirname, '../public')));
-
 
     // 4. API Routers: These handle the application's logic.
     app.use('/api/users', usersRouter);
@@ -69,8 +65,9 @@ const main = async () => {
     app.use('/api/salaries', salaryRouter);
     app.use('/api/transactions', transactionRouter);
 
-    app.listen(config.port, () => {
-        console.log(`🚀 Server is listening on http://localhost:${config.port}`);
+    const port = process.env.PORT || config.port || 5000; // Dynamic port for Render
+    app.listen(port, () => {
+        console.log(`🚀 Server is listening on http://localhost:${port}`);
     });
 };
 
