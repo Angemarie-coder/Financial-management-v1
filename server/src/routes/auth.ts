@@ -6,8 +6,8 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { config } from '../config/config';
-import { sendEmail } from '../services/mailService'; // We only need the sendEmail function
-import { UserRole } from '../entity/User'; // Added import for UserRole
+import { sendEmail } from '../services/mailService';
+import { UserRole } from '../entity/User';
 import { protect, AuthRequest } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -31,7 +31,6 @@ router.post('/login', async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials.' });
         }
-        // --- Force password change and expiry logic ---
         if (user.mustChangePassword) {
             if (user.passwordExpiresAt && user.passwordExpiresAt < new Date()) {
                 return res.status(403).json({ message: 'Your temporary password has expired. Please use the Forgot Password link to set a new password.' });
@@ -68,7 +67,6 @@ router.post('/register', async (req, res) => {
         }
         const salt = await bcrypt.genSalt(10);
         const passwordHash = await bcrypt.hash(password, salt);
-        // Generate email verification token
         const verificationToken = crypto.randomBytes(32).toString('hex');
         const verificationTokenHash = crypto.createHash('sha256').update(verificationToken).digest('hex');
         const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -76,13 +74,12 @@ router.post('/register', async (req, res) => {
             name,
             email,
             passwordHash,
-            role: UserRole.VIEWER, // Default role for self-registration
+            role: UserRole.VIEWER,
             isEmailVerified: false,
             emailVerificationToken: verificationTokenHash,
             emailVerificationExpires: verificationExpires,
         });
         await userRepository().save(user);
-        // Send verification email
         const verifyUrl = `http://localhost:3000/verify-email/${verificationToken}`;
         const message = `Welcome to the Financial Manager Platform!\n\nPlease verify your email by clicking the link below. This link is valid for 24 hours.\n\n${verifyUrl}`;
         await sendEmail({
@@ -97,12 +94,53 @@ router.post('/register', async (req, res) => {
     }
 });
 
+// --- START OF UPDATED SECTION ---
+
+// @route   POST /api/auth/verify-email
+// @desc    Verify email using token
+// @access  Public
+router.post('/verify-email', async (req, res) => {
+    // Change 1: Get token from request BODY instead of PARAMS
+    const { token } = req.body;
+
+    if (!token) {
+        return res.status(400).json({ message: 'Verification token is required.' });
+    }
+
+    // Change 2: Hash the token from the body
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    try {
+        const user = await userRepository().findOne({
+            where: {
+                emailVerificationToken: hashedToken,
+                emailVerificationExpires: MoreThan(new Date()),
+            },
+        });
+
+        if (!user) {
+            return res.status(400).json({ message: 'Verification token is invalid or has expired.' });
+        }
+
+        user.isEmailVerified = true;
+        user.emailVerificationToken = undefined;
+        user.emailVerificationExpires = undefined;
+        await userRepository().save(user);
+
+        res.status(200).json({ success: true, message: 'Email verified successfully. You can now log in.' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+// --- END OF UPDATED SECTION ---
+
 // @route   POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
     try {
         const user = await userRepository().findOne({ where: { email: req.body.email } });
         if (!user) {
-            // We still send a success response to prevent email enumeration attacks
             return res.status(200).json({ success: true, message: 'If a user with that email exists, a password reset link has been sent.' });
         }
         const resetToken = crypto.randomBytes(32).toString('hex');
@@ -110,7 +148,7 @@ router.post('/forgot-password', async (req, res) => {
         user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
         await userRepository().save(user);
 
-        const resetUrl = `http://localhost:3000/reset-password/${resetToken}`; // This link will go to our frontend app
+        const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
         const message = `You requested a password reset. Please click the following link to set a new password. This link is valid for 15 minutes.\n\n${resetUrl}`;
         
         await sendEmail({
@@ -121,7 +159,6 @@ router.post('/forgot-password', async (req, res) => {
 
         res.status(200).json({ success: true, message: 'If a user with that email exists, a password reset link has been sent.' });
     } catch (err) {
-        // Generic error for the client, detailed error is logged on the server by the mail service
         res.status(500).json({ message: 'Error processing request.' });
     }
 });
@@ -148,30 +185,6 @@ router.put('/reset-password/:token', async (req, res) => {
         user.passwordResetExpires = undefined;
         await userRepository().save(user);
         res.status(200).json({ success: true, message: 'Password reset successful' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
-    }
-});
-
-// @route   GET /api/auth/verify-email/:token
-router.get('/verify-email/:token', async (req, res) => {
-    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
-    try {
-        const user = await userRepository().findOne({
-            where: {
-                emailVerificationToken: hashedToken,
-                emailVerificationExpires: MoreThan(new Date()),
-            },
-        });
-        if (!user) {
-            return res.status(400).json({ message: 'Verification token is invalid or has expired.' });
-        }
-        user.isEmailVerified = true;
-        user.emailVerificationToken = undefined;
-        user.emailVerificationExpires = undefined;
-        await userRepository().save(user);
-        res.status(200).json({ success: true, message: 'Email verified successfully. You can now log in.' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
