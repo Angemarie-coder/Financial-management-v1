@@ -40,16 +40,12 @@ const main = async () => {
     const app = express();
 
     // 1. CORS: Must come first to handle preflight requests.
-    app.use(cors({
-        origin: [
-            'http://localhost:3000',
-            'https://financialmanagementtv1.vercel.app', // Matches deployed URL
-            'https://financialmanagementv1-40c0enx3m-angemarie-coders-projects.vercel.app'
-        ],
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
-        credentials: true // Allow credentials if needed
-    }));
+app.use(cors({
+    origin: 'https://financialmanagementv1.vercel.app', // Single origin for clarity
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'], // Include OPTIONS
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true // If using Authorization headers or cookies
+}));
     
     // 2. Body Parsers: To parse JSON and URL-encoded data.
     app.use(express.json());
