@@ -1,3 +1,4 @@
+// src/index.ts
 import "reflect-metadata";
 import express from 'express';
 import { createConnection } from "typeorm";
@@ -21,6 +22,7 @@ const main = async () => {
         await createConnection({
             type: "postgres",
             url: process.env.DATABASE_URL,
+            // These fallbacks are good for local development
             host: process.env.DB_HOST,
             port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
             username: process.env.DB_USERNAME,
@@ -39,44 +41,43 @@ const main = async () => {
 
     const app = express();
 
-    // 1. CORS: Dynamic origin check for Vercel preview URLs
+    // --- UPDATED CORS CONFIGURATION ---
+    // This now directly uses the FRONTEND_URL from your environment variables.
+    // It's cleaner and more secure.
+    const allowedOrigins = [
+        'http://localhost:3000', // For local development
+        process.env.FRONTEND_URL  // For your Vercel deployment
+    ];
+
     app.use(cors({
         origin: (origin, callback) => {
-            const allowedOrigins = [
-                'http://localhost:3000',
-                'https://financialmanagementv1.vercel.app',
-                'https://financialmanagementv1-*.vercel.app'
-            ];
-            if (!origin || allowedOrigins.some(allowed => origin.match(allowed.replace('*', '.*')))) {
+            // Allow requests with no origin (like mobile apps or curl requests)
+            // or if the origin is in our allowed list.
+            if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {
+                console.error(`CORS error: Origin ${origin} not allowed.`);
                 callback(new Error('Not allowed by CORS'));
             }
         },
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true,
-        optionsSuccessStatus: 200
     }));
+    // --- END OF UPDATED SECTION ---
 
-    // 2. Body Parsers
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
-
-    // 3. Static Files
     app.use('/public', express.static(path.join(__dirname, '../public')));
 
-    // 4. API Routers
+    // API Routers
     app.use('/api/users', usersRouter);
     app.use('/api/auth', authRouter);
     app.use('/api/budgets', budgetsRouter);
     app.use('/api/salaries', salaryRouter);
     app.use('/api/transactions', transactionRouter);
 
-    // 5. Dynamic Port
-    const port = process.env.PORT || (config.port as number) || 5000;
+    const port = process.env.PORT || 5000;
     app.listen(port, () => {
-        console.log(`🚀 Server is listening on http://localhost:${port}`);
+        console.log(`🚀 Server is listening on port ${port}`);
     });
 };
 

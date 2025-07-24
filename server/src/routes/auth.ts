@@ -13,8 +13,9 @@ import { protect, AuthRequest } from '../middleware/authMiddleware';
 const router = Router();
 const userRepository = () => getRepository(User);
 
-// @route   POST /api/auth/login
+// This route is fine, no changes needed
 router.post('/login', async (req, res) => {
+    // ... (code is correct)
     const { email, password } = req.body;
     if (!email || !password) {
         return res.status(400).json({ message: 'Please provide email and password.' });
@@ -53,6 +54,7 @@ router.post('/login', async (req, res) => {
 
 // @route   POST /api/auth/register
 router.post('/register', async (req, res) => {
+    // ... (code inside is mostly the same, only the URL generation changes)
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Please provide name, email, and password.' });
@@ -80,7 +82,12 @@ router.post('/register', async (req, res) => {
             emailVerificationExpires: verificationExpires,
         });
         await userRepository().save(user);
-        const verifyUrl = `http://localhost:3000/verify-email/${verificationToken}`;
+
+        // --- CHANGE: Use environment variable for the link ---
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const verifyUrl = `${frontendUrl}/verify-email/${verificationToken}`;
+        // --- END OF CHANGE ---
+
         const message = `Welcome to the Financial Manager Platform!\n\nPlease verify your email by clicking the link below. This link is valid for 24 hours.\n\n${verifyUrl}`;
         await sendEmail({
             to: user.email,
@@ -94,20 +101,14 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// --- START OF UPDATED SECTION ---
-
-// @route   POST /api/auth/verify-email
-// @desc    Verify email using token
-// @access  Public
+// This route is fine, no changes needed
 router.post('/verify-email', async (req, res) => {
-    // Change 1: Get token from request BODY instead of PARAMS
+    // ... (code is correct)
     const { token } = req.body;
 
     if (!token) {
         return res.status(400).json({ message: 'Verification token is required.' });
     }
-
-    // Change 2: Hash the token from the body
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
     try {
@@ -134,8 +135,6 @@ router.post('/verify-email', async (req, res) => {
     }
 });
 
-// --- END OF UPDATED SECTION ---
-
 // @route   POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
     try {
@@ -145,26 +144,30 @@ router.post('/forgot-password', async (req, res) => {
         }
         const resetToken = crypto.randomBytes(32).toString('hex');
         user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-        user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000);
         await userRepository().save(user);
 
-        const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
-        const message = `You requested a password reset. Please click the following link to set a new password. This link is valid for 15 minutes.\n\n${resetUrl}`;
+        // --- CHANGE: Use environment variable for the link ---
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+        // --- END OF CHANGE ---
         
+        const message = `You requested a password reset. Please click the following link to set a new password. This link is valid for 15 minutes.\n\n${resetUrl}`;
         await sendEmail({
             to: user.email,
             subject: 'Password Reset Request - Financial Manager Platform',
             text: message,
         });
-
         res.status(200).json({ success: true, message: 'If a user with that email exists, a password reset link has been sent.' });
     } catch (err) {
         res.status(500).json({ message: 'Error processing request.' });
     }
 });
 
-// @route   PUT /api/auth/reset-password/:token
+
+// The rest of the routes are fine, no changes needed
 router.put('/reset-password/:token', async (req, res) => {
+    // ... (code is correct)
     const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
     try {
         const user = await userRepository().findOne({
@@ -190,11 +193,8 @@ router.put('/reset-password/:token', async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 });
-
-// @route   PUT /api/auth/change-password
-// @desc    Change password for logged-in user
-// @access  Private
 router.put('/change-password', protect, async (req: AuthRequest, res) => {
+    // ... (code is correct)
     const userId = req.user?.id;
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) {
