@@ -80,7 +80,9 @@ router.post('/register', async (req, res) => {
             emailVerificationExpires: verificationExpires,
         });
         await userRepository().save(user);
-        const verifyUrl = `http://localhost:3000/verify-email/${verificationToken}`;
+        // Use environment variable for dynamic URL, fallback to localhost
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const verifyUrl = `${frontendUrl}/verify-email/${verificationToken}`;
         const message = `Welcome to the Financial Manager Platform!\n\nPlease verify your email by clicking the link below. This link is valid for 24 hours.\n\n${verifyUrl}`;
         await sendEmail({
             to: user.email,
@@ -94,20 +96,16 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// --- START OF UPDATED SECTION ---
-
-// @route   POST /api/auth/verify-email
+// @route   GET /api/auth/verify-email/:token
 // @desc    Verify email using token
 // @access  Public
-router.post('/verify-email', async (req, res) => {
-    // Change 1: Get token from request BODY instead of PARAMS
-    const { token } = req.body;
+router.get('/verify-email/:token', async (req, res) => {
+    const { token } = req.params;
 
     if (!token) {
         return res.status(400).json({ message: 'Verification token is required.' });
     }
 
-    // Change 2: Hash the token from the body
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
 
     try {
@@ -134,8 +132,6 @@ router.post('/verify-email', async (req, res) => {
     }
 });
 
-// --- END OF UPDATED SECTION ---
-
 // @route   POST /api/auth/forgot-password
 router.post('/forgot-password', async (req, res) => {
     try {
@@ -148,7 +144,8 @@ router.post('/forgot-password', async (req, res) => {
         user.passwordResetExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
         await userRepository().save(user);
 
-        const resetUrl = `http://localhost:3000/reset-password/${resetToken}`;
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
         const message = `You requested a password reset. Please click the following link to set a new password. This link is valid for 15 minutes.\n\n${resetUrl}`;
         
         await sendEmail({
