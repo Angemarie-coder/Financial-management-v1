@@ -1,4 +1,3 @@
-// src/index.ts
 import "reflect-metadata";
 import express from 'express';
 import { createConnection } from "typeorm";
@@ -40,42 +39,44 @@ const main = async () => {
 
     const app = express();
 
-    // CORS Configuration
-    const allowedOrigins = [
-        'http://localhost:3000',      // Local development
-        process.env.FRONTEND_URL,    // Production frontend URL from Render environment
-    ];
-
-    const corsOptions: cors.CorsOptions = {
+    // 1. CORS: Dynamic origin check for Vercel preview URLs
+    app.use(cors({
         origin: (origin, callback) => {
-            // Allow requests with no origin (like Postman) or from our allowed list
-            if (!origin || allowedOrigins.includes(origin)) {
+            const allowedOrigins = [
+                'http://localhost:3000',
+                'https://financialmanagementv1.vercel.app',
+                'https://financialmanagementv1-*.vercel.app'
+            ];
+            if (!origin || allowedOrigins.some(allowed => origin.match(allowed.replace('*', '.*')))) {
                 callback(null, true);
             } else {
                 callback(new Error('Not allowed by CORS'));
             }
         },
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true,
-    };
+        optionsSuccessStatus: 200
+    }));
 
-    app.use(cors(corsOptions));
-
-    // Middleware
+    // 2. Body Parsers
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
+
+    // 3. Static Files
     app.use('/public', express.static(path.join(__dirname, '../public')));
 
-    // API Routes
+    // 4. API Routers
     app.use('/api/users', usersRouter);
     app.use('/api/auth', authRouter);
     app.use('/api/budgets', budgetsRouter);
     app.use('/api/salaries', salaryRouter);
     app.use('/api/transactions', transactionRouter);
 
-    // Start Server
-    const port = process.env.PORT || 5000;
+    // 5. Dynamic Port
+    const port = process.env.PORT || (config.port as number) || 5000;
     app.listen(port, () => {
-        console.log(`🚀 Server is listening on port ${port}`);
+        console.log(`🚀 Server is listening on http://localhost:${port}`);
     });
 };
 
