@@ -22,7 +22,6 @@ const main = async () => {
         await createConnection({
             type: "postgres",
             url: process.env.DATABASE_URL,
-            // These fallbacks are good for local development
             host: process.env.DB_HOST,
             port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
             username: process.env.DB_USERNAME,
@@ -41,40 +40,39 @@ const main = async () => {
 
     const app = express();
 
-    // --- UPDATED CORS CONFIGURATION ---
-    // This now directly uses the FRONTEND_URL from your environment variables.
-    // It's cleaner and more secure.
+    // CORS Configuration
     const allowedOrigins = [
-        'http://localhost:3000', // For local development
-        process.env.FRONTEND_URL  // For your Vercel deployment
+        'http://localhost:3000',      // Local development
+        process.env.FRONTEND_URL,    // Production frontend URL from Render environment
     ];
 
-    app.use(cors({
+    const corsOptions: cors.CorsOptions = {
         origin: (origin, callback) => {
-            // Allow requests with no origin (like mobile apps or curl requests)
-            // or if the origin is in our allowed list.
+            // Allow requests with no origin (like Postman) or from our allowed list
             if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {
-                console.error(`CORS error: Origin ${origin} not allowed.`);
                 callback(new Error('Not allowed by CORS'));
             }
         },
         credentials: true,
-    }));
-    // --- END OF UPDATED SECTION ---
+    };
 
+    app.use(cors(corsOptions));
+
+    // Middleware
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
     app.use('/public', express.static(path.join(__dirname, '../public')));
 
-    // API Routers
+    // API Routes
     app.use('/api/users', usersRouter);
     app.use('/api/auth', authRouter);
     app.use('/api/budgets', budgetsRouter);
     app.use('/api/salaries', salaryRouter);
     app.use('/api/transactions', transactionRouter);
 
+    // Start Server
     const port = process.env.PORT || 5000;
     app.listen(port, () => {
         console.log(`🚀 Server is listening on port ${port}`);
